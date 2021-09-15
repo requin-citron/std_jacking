@@ -59,7 +59,7 @@ int main(int argc, char const *argv[]) {
     return 1;
   }
   if(getuid() != 0 && geteuid() != 0){
-    fprintf(stderr, "You need root privileges to attach process");
+    fprintf(stderr, "You need root privileges to attach process\n");
     return 5;
   }
   srand(time(NULL));
