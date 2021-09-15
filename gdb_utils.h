@@ -8,5 +8,5 @@
 
 void popen_wr(int *, int *,const char *);
 void exec_cmd(int *, int *, char* ,size_t, char*);
-int gdb_hook(char *,char *);
+int gdb_hook(char *,char **);
 void gdb_unhook(char *, int );

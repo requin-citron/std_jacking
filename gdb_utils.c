@@ -49,21 +49,29 @@ void exec_cmd(int *pipe_stdin, int *pipe_stdout,char *out,size_t len, char* cmd)
 
 }
 
-int gdb_hook(char *pid,char *fifo_name){
+int gdb_hook(char *pid,char **fifo_name){
   int pipe_stdin[2];
   int pipe_stdout[2];
   char cmd[512]={0};
   char out[512] = {0};
   size_t len = 511;
   popen_wr(pipe_stdin, pipe_stdout,pid);
-  //open fifo file
-  snprintf(cmd, 511,"call (int)open(\"%s\", 066)\n",fifo_name);
+  //open fifo file stdout
+  snprintf(cmd, 511,"call (int)open(\"%s\", 066)\n",fifo_name[0]);
   exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
-  int fd_fifo = atoi(strchr(out,'=')+1);
+  int fd_fifo_stdout = atoi(strchr(out,'=')+1);
+
+  //open fifo file stderr
+  //snprintf(cmd, 511,"call (int)open(\"%s\", 066)\n",fifo_name[1]);
+  //exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
+  //int fd_fifo_stderr = atoi(strchr(out,'=')+1);
 
   //stage 2 make set same flag as stdout
-  snprintf(cmd, 511,"call (int)fcntl(%d,4,(int)fcntl(1,3))\n",fd_fifo);
+  snprintf(cmd, 511,"call (int)fcntl(%d,4,(int)fcntl(1,3))\n",fd_fifo_stdout);
   exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
+  //make set same flag as stderr
+  //snprintf(cmd, 511,"call (int)fcntl(%d,4,(int)fcntl(2,3))\n",fd_fifo_stderr);
+  //exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
 
   //stage3
   exec_cmd(pipe_stdin, pipe_stdout,out,len, "call (int)dup(1)\n");
@@ -73,10 +81,10 @@ int gdb_hook(char *pid,char *fifo_name){
   //stage4 close stderr
   exec_cmd(pipe_stdin, pipe_stdout,out,len, "call (int)close(2)\n");
   //stage 5 dup2 stdout
-  snprintf(cmd, 511,"call (int)dup2(%d,1)\n",fd_fifo);
+  snprintf(cmd, 511,"call (int)dup2(%d,1)\n",fd_fifo_stdout);
   exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
   //stage 5 stderr
-  snprintf(cmd, 511,"call (int)dup2(%d,2)\n",fd_fifo);
+  snprintf(cmd, 511,"call (int)dup2(%d,2)\n",fd_fifo_stdout);
   exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
   //clean and exit
   exec_cmd(pipe_stdin, pipe_stdout,out,len, "detach\n");
@@ -103,15 +111,3 @@ void gdb_unhook(char *pid, int pts_fd){
   exec_cmd(pipe_stdin, pipe_stdout,out,len, "quit\n");
   wait(NULL);
 }
-
-
-// int main(int argc, char  *argv[]) {
-//   //if(argc != 2){
-//   //  fprintf(stderr,"USAGE: %s pid\n",argv[0]);
-//   //  return 1;
-//   //}
-//   int backup=gdb_hook(argv[1], argv[2]);
-//   sleep(30);
-//   gdb_unhook(argv[1], backup);
-//   return 0;
-// }

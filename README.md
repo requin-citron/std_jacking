@@ -22,3 +22,10 @@ make
 ```
 ./std_jacking pid
 ```
+
+If you want to hijack shell process you should add
+with line in rc file.
+```
+eval $(resize)
+alias ls='ls -C  --color=yes'
+```
