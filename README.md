@@ -20,7 +20,7 @@ make
 ## usage
 
 ```
-./std_jacking pid
+./std_jacking -p pid -eo
 ```
 
 If you want to hijack shell process you should add
