@@ -26,6 +26,6 @@ make
 If you want to hijack shell process you should add
 with line in rc file.
 ```
-eval $(resize)
+eval "$(resize)"
 alias ls='ls -C  --color=yes'
 ```
