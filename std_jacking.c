@@ -15,6 +15,7 @@
 char flag=1;
 char *pid;
 int fd_backup;
+int flag_std;
 
 
 /*
@@ -50,16 +51,38 @@ char *random_choise(int fd){
 
 void on_exit_sig(int sig_id){
   flag=0;
-  gdb_unhook(pid, fd_backup);
+  gdb_unhook(pid, fd_backup, flag_std);
+}
+void print_usage(const char *magie){
+  fprintf(stderr, "Usage %s -p [pid] -[e|o]\n",magie);
+  fprintf(stderr, "   -e             stderr\n");
+  fprintf(stderr, "   -o             stdout\n");
+  exit(6);
 }
 
-int main(int argc, char const *argv[]) {
-  if(argc != 2){
-    fprintf(stderr, "Usage: %s pid\n", argv[0]);
-    return 1;
+int main(int argc, char const **argv) {
+  char *p = NULL;
+  int c;
+  while((c = getopt(argc, (char * const *)argv, "oep:")) != -1){
+    switch (c) {
+      case 'o':
+          flag_std |= STDOUT_HIJACK;
+          break;
+      case 'e':
+          flag_std |= STDERR_HIJACK;
+          break;
+      case 'p':
+          p = optarg;
+          break;
+      default:
+          print_usage(argv[0]);
+    }
+  }
+  if(p == NULL || flag_std == 0){
+    print_usage(argv[0]);
   }
   if(getuid() != 0 && geteuid() != 0){
-    fprintf(stderr, "You need root privileges to attach process\n");
+    fprintf(stderr,"you must be root to hijack process\n");
     return 5;
   }
   srand(time(NULL));
@@ -69,24 +92,24 @@ int main(int argc, char const *argv[]) {
   sa.sa_flags = 0;
   sa.sa_handler = on_exit_sig;
 
-  if(sigaction(SIGINT, &sa, NULL) == -1 &&
+  if(sigaction(SIGINT, &sa, NULL) == -1 ||
   sigaction(SIGQUIT, &sa, NULL) == -1){
     fprintf(stderr,"%s\n", strerror(errno));
     return 6;
   }
   //SETUP
-  pid = (char *)argv[1];
+  pid = (char *)p;
   char *fifo_name_list[1]; //peut etre une upgrade dans le futur
   fifo_name_list[0] = random_choise((int)(1));
   mkfifo(fifo_name_list[0], 0);
   chmod(fifo_name_list[0], 0666);
 
-  fd_backup = gdb_hook((char *)argv[1], fifo_name_list);
+  fd_backup = gdb_hook((char *)pid, fifo_name_list, flag_std);
   char path[120]={0};
   char buff[512];
   size_t len = 0;
 
-  sprintf(path, "/proc/%s/fd/%d", argv[1], fd_backup);
+  sprintf(path, "/proc/%s/fd/%d", pid, fd_backup);
   FILE *victime = fopen(path,"w+");
   int tube = open(fifo_name_list[0],066);
 

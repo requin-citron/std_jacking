@@ -49,7 +49,7 @@ void exec_cmd(int *pipe_stdin, int *pipe_stdout,char *out,size_t len, char* cmd)
 
 }
 
-int gdb_hook(char *pid,char **fifo_name){
+int gdb_hook(char *pid,char **fifo_name,int flags){
   int pipe_stdin[2];
   int pipe_stdout[2];
   char cmd[512]={0};
@@ -77,15 +77,21 @@ int gdb_hook(char *pid,char **fifo_name){
   exec_cmd(pipe_stdin, pipe_stdout,out,len, "call (int)dup(1)\n");
   int aim_stdout_backup = atoi(strchr(out,'=')+1);
   //stage 4 close stdout
-  exec_cmd(pipe_stdin, pipe_stdout,out,len, "call (int)close(1)\n");
+  if(flags&STDOUT_HIJACK)
+    exec_cmd(pipe_stdin, pipe_stdout,out,len, "call (int)close(1)\n");
   //stage4 close stderr
-  exec_cmd(pipe_stdin, pipe_stdout,out,len, "call (int)close(2)\n");
+  if(flags&STDERR_HIJACK)
+    exec_cmd(pipe_stdin, pipe_stdout,out,len, "call (int)close(2)\n");
   //stage 5 dup2 stdout
-  snprintf(cmd, 511,"call (int)dup2(%d,1)\n",fd_fifo_stdout);
-  exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
+  if(flags&STDOUT_HIJACK){
+    snprintf(cmd, 511,"call (int)dup2(%d,1)\n",fd_fifo_stdout);
+    exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
+  }
   //stage 5 stderr
-  snprintf(cmd, 511,"call (int)dup2(%d,2)\n",fd_fifo_stdout);
-  exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
+  if(flags&STDERR_HIJACK){
+    snprintf(cmd, 511,"call (int)dup2(%d,2)\n",fd_fifo_stdout);
+    exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
+  }
   //clean and exit
   exec_cmd(pipe_stdin, pipe_stdout,out,len, "detach\n");
   exec_cmd(pipe_stdin, pipe_stdout,out,len, "quit\n");
@@ -93,20 +99,24 @@ int gdb_hook(char *pid,char **fifo_name){
   return aim_stdout_backup;
 }
 
-void gdb_unhook(char *pid, int pts_fd){
+void gdb_unhook(char *pid, int pts_fd, int flags){
   int pipe_stdin[2];
   int pipe_stdout[2];
   char cmd[512] = {0};
   char out[512] = {0};
   size_t len = 511;
   popen_wr(pipe_stdin, pipe_stdout,pid);
+  //fprintf(stderr, "%d\n", pts_fd);
   //stdout
-  fprintf(stderr, "%d\n", pts_fd);
-  snprintf(cmd, len, "call (int)dup2(%d,1)\n", pts_fd);
-  exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
+  if(flags&STDOUT_HIJACK){
+    snprintf(cmd, len, "call (int)dup2(%d,1)\n", pts_fd);
+    exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
+  }
   //stderr
-  snprintf(cmd, len, "call (int)dup2(%d,2)\n", pts_fd);
-  exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
+  if(flags&STDERR_HIJACK){
+    snprintf(cmd, len, "call (int)dup2(%d,2)\n", pts_fd);
+    exec_cmd(pipe_stdin, pipe_stdout,out,len, cmd);
+  }
   exec_cmd(pipe_stdin, pipe_stdout,out,len, "detach\n");
   exec_cmd(pipe_stdin, pipe_stdout,out,len, "quit\n");
   wait(NULL);
