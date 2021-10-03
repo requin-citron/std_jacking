@@ -127,7 +127,7 @@ int main(int argc, char const **argv) {
     len = read(tube, buff, 512);
     write(STDOUT_FILENO, buff, len);
     write(fileno(victime), buff, len);
-    usleep(200);
+    usleep(300); //to not take too much cpu time
 
   }
   //CLEANUP
