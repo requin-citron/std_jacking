@@ -34,6 +34,20 @@ void popen_wr(int *pipe_stdin, int *pipe_stdout,const char *pid){
         exit(4);
         break;
     }
+    //clean stdout
+    char buff[512]= {0};
+    char one_char[1] = {0};
+    size_t i=0;
+    char *offset_gdb = NULL;
+    do {
+      i=0;
+      memset(buff,0,512);
+        do {
+          read(pipe_stdout[0], one_char, 1);
+          buff[i] = *one_char;
+          i+=1;
+        } while(*one_char != '\n' && i<512 && (offset_gdb =strstr(buff,"(gdb)")) == NULL);
+    } while(offset_gdb  == NULL);
 
 }
 
