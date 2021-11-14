@@ -8,6 +8,14 @@
 #include <sys/prctl.h>
 #include "gdb_utils.h"
 
+//!équivalent a popen mais permet d'avoir une écriture et une lecture
+/*!
+  \param[out] pipe_stdin pipe of stdin
+  \param[out] pipe_stdout pipe of stdout
+  \param[in] pid pid of target
+  the function create new process and exec gdb, the aim is to use the pipe to
+  cominicate with GDB
+*/
 void popen_wr(int *pipe_stdin, int *pipe_stdout,const char *pid){
     int status = pipe(pipe_stdin);
     int status1 = pipe(pipe_stdout);
@@ -51,8 +59,16 @@ void popen_wr(int *pipe_stdin, int *pipe_stdout,const char *pid){
 
 }
 
+//! exec commande in GDB
+/*!
+  \param[in] pipe_stdin stdin of GDB
+  \param[in] pipe_stdout stdout of GDB
+  \param[out] out output buffer
+  \param[in] len size of output buffer
+  \param[in] cmd commande line send to GDB
+  send commande to GDB throu pipe and get the response after equal<
+*/
 void exec_cmd(int *pipe_stdin, int *pipe_stdout,char *out,size_t len, char* cmd){
-
     write(pipe_stdin[1],cmd, strlen(cmd));
     if(strcmp(cmd,"quit\n")!=0 && strcmp(cmd,"detach\n")!=0){
       do {
@@ -63,6 +79,13 @@ void exec_cmd(int *pipe_stdin, int *pipe_stdout,char *out,size_t len, char* cmd)
 
 }
 
+/*!
+  \param[in] pid pid of the target process
+  \param[out] fifo_name array of named pipe
+  \param[in] flags user flags to chose what we hook
+  \return backup of all io fd
+  create instance of GDB and hook process, hook standar io
+*/
 int gdb_hook(char *pid,char **fifo_name,int flags){
   int pipe_stdin[2];
   int pipe_stdout[2];
@@ -113,6 +136,12 @@ int gdb_hook(char *pid,char **fifo_name,int flags){
   return aim_stdout_backup;
 }
 
+//! revert std io
+/*!
+  \param[in] pid target pid
+  \param[in] pts_fd fd of default pts
+  \param[in] flags user flags 
+*/
 void gdb_unhook(char *pid, int pts_fd, int flags){
   int pipe_stdin[2];
   int pipe_stdout[2];

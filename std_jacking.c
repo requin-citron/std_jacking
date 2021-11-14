@@ -33,6 +33,7 @@ $5 = -1
 (gdb) call (int)dup2(3,1)
 */
 
+//! create random named pipe
 char *random_choise(int fd){
     size_t len = sizeof(char)*TEMPLATE_RANDOM+11+6;// max len of int and /tmp
     char *ret = malloc(len);
@@ -48,11 +49,16 @@ char *random_choise(int fd){
     snprintf(ret, len, "/tmp/%s_%d",tmp, fd);
     return ret;
 }
-
+//! ctrl+c hook
+/*!
+  \param sig_id signal id
+  unhook target
+*/
 void on_exit_sig(int sig_id){
   flag=0;
   gdb_unhook(pid, fd_backup, flag_std);
 }
+//! software usage
 void print_usage(const char *magie){
   fprintf(stderr, "Usage %s -p [pid] -[e|o]\n",magie);
   fprintf(stderr, "   -e             stderr\n");
